@@ -1,8 +1,8 @@
 /*
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 21:45:00
- * @LastEditors: xingnian && jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 21:45:00
+ * @LastEditors: xingnian jixingnian@gmail.com
+ * @LastEditTime: 2025-11-22 23:09:23
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\src\web_module.c
  * @Description: Web 配网模块实现（HTTP 服务器 + SPIFFS 静态资源）
  *
@@ -214,6 +214,7 @@ static esp_err_t web_module_saved_get_handler(httpd_req_t *req)
     if (cnt == 0) {
         static const char *EMPTY_JSON = "{\"items\":[]}";
         httpd_resp_send(req, EMPTY_JSON, strlen(EMPTY_JSON));
+        free(list);
         return ESP_OK;
     }
 
@@ -267,6 +268,79 @@ static esp_err_t web_module_saved_get_handler(httpd_req_t *req)
     offset += (size_t)snprintf(json + offset, sizeof(json) - offset, "]}");
 
     httpd_resp_send(req, json, (int)offset);
+    return ESP_OK;
+}
+
+/**
+ * @brief /api/wifi/scan：扫描附近 WiFi 列表
+ */
+static esp_err_t web_module_scan_get_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+
+    /* 未提供回调时返回空列表，方便前端统一处理 */
+    if (s_web_cfg.scan_cb == NULL) {
+        static const char *EMPTY_JSON = "{\"items\":[]}";
+        httpd_resp_send(req, EMPTY_JSON, strlen(EMPTY_JSON));
+        return ESP_OK;
+    }
+
+    /* 使用堆缓冲区承载扫描结果，具体数量由回调实现控制 */
+    enum { WEB_MAX_SCAN_RESULT = 32 };
+    web_scan_result_t *list = (web_scan_result_t *)malloc(WEB_MAX_SCAN_RESULT * sizeof(web_scan_result_t));
+    if (list == NULL) {
+        httpd_resp_send_err(req,
+                            HTTPD_500_INTERNAL_SERVER_ERROR,
+                            "no memory");
+        return ESP_OK;
+    }
+
+    size_t    cnt = WEB_MAX_SCAN_RESULT;
+    esp_err_t ret = s_web_cfg.scan_cb(list, &cnt);
+    if (ret != ESP_OK) {
+        httpd_resp_send_err(req,
+                            HTTPD_500_INTERNAL_SERVER_ERROR,
+                            "scan failed");
+        free(list);
+        return ESP_OK;
+    }
+
+    if (cnt == 0) {
+        static const char *EMPTY_JSON = "{\"items\":[]}";
+        httpd_resp_send(req, EMPTY_JSON, strlen(EMPTY_JSON));
+        return ESP_OK;
+    }
+
+    /* 序列化为形如 {"items":[{"index":0,"ssid":"xxx","rssi":-60}, ...]} 的 JSON */
+    char  json[768];
+    size_t offset = 0;
+
+    offset += (size_t)snprintf(json + offset, sizeof(json) - offset, "{\"items\":[");
+
+    for (size_t i = 0; i < cnt && offset < sizeof(json); i++) {
+        const char *comma = (i == 0) ? "" : ",";
+        offset += (size_t)snprintf(json + offset,
+                                   sizeof(json) - offset,
+                                   "%s{\"index\":%u,\"ssid\":\"%s\",\"rssi\":%d}",
+                                   comma,
+                                   (unsigned)i,
+                                   list[i].ssid,
+                                   (int)list[i].rssi);
+    }
+
+    if (offset >= sizeof(json)) {
+        /* 理论上不会超出，若超出则截断为一个空列表作为兜底 */
+        const char *FALLBACK = "{\"items\":[]}";
+        httpd_resp_send(req, FALLBACK, strlen(FALLBACK));
+        free(list);
+        return ESP_OK;
+    }
+
+    offset += (size_t)snprintf(json + offset, sizeof(json) - offset, "]}");
+
+    httpd_resp_send(req, json, (int)offset);
+    free(list);
     return ESP_OK;
 }
 
@@ -428,6 +502,17 @@ static esp_err_t web_module_start_server(void)
             .user_ctx = NULL,
         };
         httpd_register_uri_handler(s_http_server, &uri_saved);
+    }
+
+    /* 扫描附近 WiFi 接口（可选） */
+    if (s_web_cfg.scan_cb != NULL) {
+        static const httpd_uri_t uri_scan = {
+            .uri      = "/api/wifi/scan",
+            .method   = HTTP_GET,
+            .handler  = web_module_scan_get_handler,
+            .user_ctx = NULL,
+        };
+        httpd_register_uri_handler(s_http_server, &uri_scan);
     }
 
     /* 删除已保存 WiFi 接口（可选） */

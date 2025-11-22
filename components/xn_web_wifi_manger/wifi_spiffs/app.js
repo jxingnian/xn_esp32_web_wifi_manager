@@ -281,6 +281,84 @@
       });
   }
 
+  /* -------------------- 扫描附近 WiFi：请求与渲染 -------------------- */
+
+  /**
+   * 将扫描结果渲染到“扫描附近 WiFi”表格中。
+   *
+   * @param items 形如 [{ ssid, rssi }, ...] 的数组
+   */
+  function renderScanList(items) {
+    if (!dom.scanBody) {
+      return;
+    }
+
+    items = Array.isArray(items) ? items : [];
+
+    dom.scanBody.innerHTML = '';
+
+    if (dom.scanEmpty) {
+      dom.scanEmpty.style.display = items.length === 0 ? 'block' : 'none';
+    }
+
+    if (items.length === 0) {
+      return;
+    }
+
+    var rows = [];
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i] || {};
+      var ssid = item.ssid || '-';
+      var rssi = typeof item.rssi === 'number' ? item.rssi : null;
+
+      var signalText = rssi === null ? '-' : (rssi + ' dBm');
+
+      rows.push(
+        '<tr>' +
+          '<td>' + ssid + '</td>' +
+          '<td>' + signalText + '</td>' +
+          '<td>-</td>' +
+        '</tr>'
+      );
+    }
+
+    dom.scanBody.innerHTML = rows.join('');
+  }
+
+  /**
+   * 发起一次“扫描附近 WiFi”的请求。
+   */
+  function loadScanList() {
+    if (!dom.scanBody || !window.fetch) {
+      return;
+    }
+
+    // 简单的“正在扫描”提示
+    if (dom.scanEmpty) {
+      dom.scanEmpty.textContent = '正在扫描...';
+      dom.scanEmpty.style.display = 'block';
+    }
+    dom.scanBody.innerHTML = '';
+
+    fetch('/api/wifi/scan')
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error('http ' + res.status);
+        }
+        return res.json();
+      })
+      .then(function (data) {
+        var items = (data && data.items) || [];
+        renderScanList(items);
+      })
+      .catch(function () {
+        if (dom.scanEmpty) {
+          dom.scanEmpty.textContent = '扫描失败';
+          dom.scanEmpty.style.display = 'block';
+        }
+      });
+  }
+
   /**
    * 连接一条已保存 WiFi，按 SSID 标识。
    *
@@ -378,9 +456,7 @@
     if (dom.btnScan) {
       dom.btnScan.addEventListener('click', function (event) {
         event.preventDefault();
-
-        // 预留：在此处发起“扫描 WiFi”的请求，并在 dom.scanBody 中渲染结果
-        console.log('[wifi-ui] scan clicked (占位逻辑，尚未接入后台)');
+        loadScanList();
       });
     }
 

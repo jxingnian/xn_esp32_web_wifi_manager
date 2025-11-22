@@ -2,7 +2,7 @@
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 21:45:00
  * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 22:51:55
+ * @LastEditTime: 2025-11-22 23:11:28
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\include\web_module.h
  * @Description: Web 配网模块对外接口（HTTP 服务器 + 回调驱动的业务能力）
  *
@@ -50,6 +50,14 @@ typedef struct {
 } web_saved_wifi_info_t;
 
 /**
+ * @brief Web 端展示用的“扫描结果”精简信息
+ */
+typedef struct {
+    char   ssid[32]; ///< 扫描到的 AP SSID
+    int8_t rssi;     ///< 信号强度（dBm）
+} web_scan_result_t;
+
+/**
  * @brief Web 模块查询 WiFi 状态的回调
  *
  * 由上层（通常是 wifi_manage）实现，用于向 Web 模块提供当前 WiFi 状态。
@@ -71,6 +79,14 @@ typedef esp_err_t (*web_get_status_cb_t)(web_wifi_status_t *out_status);
 typedef esp_err_t (*web_get_saved_list_cb_t)(web_saved_wifi_info_t *list, size_t *inout_cnt);
 
 /**
+ * @brief Web 模块触发一次 WiFi 扫描并获取结果的回调
+ *
+ * @param[in,out] list      Web 模块提供的缓存数组
+ * @param[in,out] inout_cnt 入口为缓存容量，出口为实际填充数量
+ */
+typedef esp_err_t (*web_scan_cb_t)(web_scan_result_t *list, size_t *inout_cnt);
+
+/**
  * @brief 删除已保存 WiFi 的回调（按 SSID 匹配）
  */
 typedef esp_err_t (*web_delete_saved_cb_t)(const char *ssid);
@@ -89,6 +105,7 @@ typedef struct {
     int                   http_port;        ///< HTTP 监听端口（典型为 80/8080，<=0 时使用默认 80）
     web_get_status_cb_t   get_status_cb;    ///< 查询当前 WiFi 状态回调
     web_get_saved_list_cb_t get_saved_list_cb; ///< 获取已保存 WiFi 列表回调
+    web_scan_cb_t         scan_cb;          ///< 执行一次 WiFi 扫描并返回结果的回调
     web_delete_saved_cb_t delete_saved_cb;  ///< 删除已保存 WiFi 的回调
     web_connect_saved_cb_t connect_saved_cb; ///< 连接已保存 WiFi 的回调
 } web_module_config_t;
@@ -101,6 +118,7 @@ typedef struct {
         .http_port        = 80,                \
         .get_status_cb    = NULL,              \
         .get_saved_list_cb = NULL,             \
+        .scan_cb          = NULL,              \
         .delete_saved_cb  = NULL,              \
         .connect_saved_cb = NULL,              \
     }

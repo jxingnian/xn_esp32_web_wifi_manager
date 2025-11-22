@@ -214,6 +214,51 @@ static esp_err_t wifi_manage_delete_web_saved(const char *ssid)
     return wifi_storage_delete_by_ssid(ssid);
 }
 
+/* -------------------- Web 回调：扫描附近 WiFi -------------------- */
+/**
+ * @brief 提供给 Web 的“扫描附近 WiFi”回调
+ *
+ * 通过底层 wifi_module_scan 获取一次附近 AP 列表，
+ * 并转换为 Web 端展示所需的精简字段。
+ */
+static esp_err_t wifi_manage_scan_web(web_scan_result_t *list, size_t *inout_cnt)
+{
+    if (list == NULL || inout_cnt == NULL || *inout_cnt == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    uint16_t cap = (uint16_t)(*inout_cnt);
+    wifi_module_scan_result_t *results =
+        (wifi_module_scan_result_t *)malloc(cap * sizeof(wifi_module_scan_result_t));
+    if (results == NULL) {
+        *inout_cnt = 0;
+        return ESP_ERR_NO_MEM;
+    }
+
+    uint16_t count = cap;
+    esp_err_t ret = wifi_module_scan(results, &count);
+    if (ret != ESP_OK) {
+        free(results);
+        *inout_cnt = 0;
+        return ret;
+    }
+
+    size_t out_cnt = (size_t)count;
+    if (out_cnt > *inout_cnt) {
+        out_cnt = *inout_cnt;
+    }
+
+    for (size_t i = 0; i < out_cnt; i++) {
+        strncpy(list[i].ssid, results[i].ssid, sizeof(list[i].ssid));
+        list[i].ssid[sizeof(list[i].ssid) - 1] = '\0';
+        list[i].rssi = results[i].rssi;
+    }
+
+    free(results);
+    *inout_cnt = out_cnt;
+    return ESP_OK;
+}
+
 /* -------------------- Web 回调：从已保存列表触发连接 -------------------- */
 /**
  * @brief 提供给 Web 的“连接已保存 WiFi”回调
@@ -524,6 +569,7 @@ esp_err_t wifi_manage_init(const wifi_manage_config_t *config)
         /* 通过回调向 Web 模块暴露当前 WiFi 状态与已保存列表等能力 */
         web_cfg.get_status_cb     = wifi_manage_get_web_status;
         web_cfg.get_saved_list_cb = wifi_manage_get_web_saved_list;
+        web_cfg.scan_cb           = wifi_manage_scan_web;
         web_cfg.delete_saved_cb   = wifi_manage_delete_web_saved;
         web_cfg.connect_saved_cb  = wifi_manage_connect_web_saved;
 
