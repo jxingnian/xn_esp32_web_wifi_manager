@@ -314,7 +314,7 @@
       var signalText = rssi === null ? '-' : (rssi + ' dBm');
 
       rows.push(
-        '<tr>' +
+        '<tr data-ssid="' + ssid + '">' +
           '<td>' + ssid + '</td>' +
           '<td>' + signalText + '</td>' +
           '<td>-</td>' +
@@ -489,6 +489,29 @@
       dom.btnScan.addEventListener('click', function (event) {
         event.preventDefault();
         loadScanList();
+      });
+    }
+
+    // 点击扫描结果行：将 SSID 填入“连接 WiFi”表单
+    if (dom.scanBody && dom.inputSsid) {
+      dom.scanBody.addEventListener('click', function (event) {
+        var node = event.target;
+        while (node && node !== dom.scanBody && node.tagName !== 'TR') {
+          node = node.parentNode;
+        }
+        if (!node || node === dom.scanBody) {
+          return;
+        }
+
+        var ssid = node.getAttribute('data-ssid') || '';
+        if (!ssid) {
+          return;
+        }
+
+        dom.inputSsid.value = ssid;
+        if (dom.inputPassword) {
+          dom.inputPassword.value = '';
+        }
       });
     }
 

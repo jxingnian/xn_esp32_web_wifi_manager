@@ -2,7 +2,7 @@
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 21:45:00
  * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 23:16:43
+ * @LastEditTime: 2025-11-22 23:24:27
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\src\web_module.c
  * @Description: Web 配网模块实现（HTTP 服务器 + SPIFFS 静态资源）
  *
@@ -473,6 +473,9 @@ static esp_err_t web_module_saved_connect_handler(httpd_req_t *req)
 static esp_err_t web_module_start_server(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
+    /* 默认 max_uri_handlers 较小，这里适当调大以容纳所有静态资源与 API */
+    config.max_uri_handlers = 12;
 
     if (s_web_cfg.http_port > 0) {
         config.server_port = (uint16_t)s_web_cfg.http_port;
