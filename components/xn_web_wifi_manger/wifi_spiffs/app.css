@@ -155,6 +155,32 @@ textarea {
   word-break: break-all;
 }
 
+/* 连接状态处的简单加载动画，通过 data-loading 标记控制 */
+.status-value[data-loading="true"] {
+  position: relative;
+  padding-right: 18px;
+}
+
+.status-value[data-loading="true"]::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 999px;
+  border: 2px solid rgba(148, 163, 184, 0.65);
+  border-top-color: #60a5fa;
+  animation: status-spin 0.8s linear infinite;
+}
+
+@keyframes status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .status-visual {
   display: flex;
   justify-content: flex-end;

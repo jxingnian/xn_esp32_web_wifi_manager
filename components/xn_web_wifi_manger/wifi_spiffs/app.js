@@ -147,14 +147,31 @@
       return;
     }
 
-    var connected = !!data.connected;
+    var state = typeof data.state === 'number' ? data.state : 0;
+    var connected = !!data.connected && state === 2; // 仅在“已连接”状态下视为连接成功
     var ssid = data.ssid || '-';
     var ip = data.ip || '-';
     var rssi = typeof data.rssi === 'number' ? data.rssi : null;
     var mode = data.mode || null;
 
     if (dom.statusText) {
-      dom.statusText.textContent = connected ? '已连接' : '未连接';
+      var text = '未连接';
+      if (state === 1) {
+        text = '正在连接';
+      } else if (state === 2) {
+        text = '已连接';
+      } else if (state === 3) {
+        text = '连接失败';
+      }
+
+      dom.statusText.textContent = text;
+
+      // 正在连接时显示转圈加载图标
+      if (state === 1) {
+        dom.statusText.setAttribute('data-loading', 'true');
+      } else {
+        dom.statusText.removeAttribute('data-loading');
+      }
     }
     if (dom.statusSsid) {
       dom.statusSsid.textContent = ssid;

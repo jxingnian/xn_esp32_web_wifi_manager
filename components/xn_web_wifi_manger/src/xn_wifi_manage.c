@@ -57,17 +57,39 @@ static esp_err_t wifi_manage_get_web_status(web_wifi_status_t *out)
     /* 统一设置默认值，避免调用方看到未初始化字段 */
     memset(out, 0, sizeof(*out));
     out->connected = false;
+    out->state     = WEB_WIFI_STATUS_STATE_IDLE;
     strncpy(out->ssid, "-", sizeof(out->ssid));
     out->ssid[sizeof(out->ssid) - 1] = '\0';
     strncpy(out->ip, "-", sizeof(out->ip));
     out->ip[sizeof(out->ip) - 1] = '\0';
+    strncpy(out->mode, "-", sizeof(out->mode));
+    out->mode[sizeof(out->mode) - 1] = '\0';
 
-    /* 如管理状态机认为“未连接”，直接返回默认占位值 */
-    if (s_wifi_manage_state != WIFI_MANAGE_STATE_CONNECTED) {
-        return ESP_OK;
+    /* 根据状态机与连接标志推导当前抽象状态 */
+    if (s_wifi_connecting) {
+        out->state = WEB_WIFI_STATUS_STATE_CONNECTING;
+    } else {
+        switch (s_wifi_manage_state) {
+        case WIFI_MANAGE_STATE_CONNECTED:
+            out->state     = WEB_WIFI_STATUS_STATE_CONNECTED;
+            out->connected = true;
+            break;
+
+        case WIFI_MANAGE_STATE_CONNECT_FAILED:
+            out->state = WEB_WIFI_STATUS_STATE_FAILED;
+            break;
+
+        case WIFI_MANAGE_STATE_DISCONNECTED:
+        default:
+            out->state = WEB_WIFI_STATUS_STATE_IDLE;
+            break;
+        }
     }
 
-    out->connected = true;
+    /* 非“已连接”状态下不再继续读取底层信息 */
+    if (out->state != WEB_WIFI_STATUS_STATE_CONNECTED) {
+        return ESP_OK;
+    }
 
     /* 读取当前连接 AP 的基础信息（SSID + RSSI） */
     wifi_ap_record_t ap_info = {0};
@@ -88,6 +110,29 @@ static esp_err_t wifi_manage_get_web_status(web_wifi_status_t *out)
                      IPSTR,
                      IP2STR(&ip_info.ip));
         }
+    }
+
+    /* 读取当前 WiFi 模式，并转换为简短字符串 */
+    wifi_mode_t wifi_mode = WIFI_MODE_NULL;
+    if (esp_wifi_get_mode(&wifi_mode) == ESP_OK) {
+        const char *mode_str = "-";
+
+        switch (wifi_mode) {
+        case WIFI_MODE_STA:
+            mode_str = "STA";
+            break;
+        case WIFI_MODE_AP:
+            mode_str = "AP";
+            break;
+        case WIFI_MODE_APSTA:
+            mode_str = "AP+STA";
+            break;
+        default:
+            break;
+        }
+
+        strncpy(out->mode, mode_str, sizeof(out->mode));
+        out->mode[sizeof(out->mode) - 1] = '\0';
     }
 
     return ESP_OK;

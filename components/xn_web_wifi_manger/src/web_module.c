@@ -136,7 +136,7 @@ static esp_err_t web_module_js_get_handler(httpd_req_t *req)
 static esp_err_t web_module_status_get_handler(httpd_req_t *req)
 {
     web_wifi_status_t status = {0};
-    char              json[160];
+    char              json[192];
 
     if (s_web_cfg.get_status_cb) {
         if (s_web_cfg.get_status_cb(&status) != ESP_OK) {
@@ -148,18 +148,22 @@ static esp_err_t web_module_status_get_handler(httpd_req_t *req)
     } else {
         /* 未提供回调时给出一个简单占位值 */
         status.connected = false;
+        status.state     = WEB_WIFI_STATUS_STATE_IDLE;
         strncpy(status.ssid, "-", sizeof(status.ssid));
         status.ssid[sizeof(status.ssid) - 1] = '\0';
         strncpy(status.ip, "-", sizeof(status.ip));
         status.ip[sizeof(status.ip) - 1] = '\0';
         status.rssi = 0;
+        strncpy(status.mode, "-", sizeof(status.mode));
+        status.mode[sizeof(status.mode) - 1] = '\0';
     }
 
     /* 简单 JSON 序列化：假定 SSID/IP/mode 不包含引号等特殊字符 */
     int len = snprintf(json,
                        sizeof(json),
-                       "{\"connected\":%s,\"ssid\":\"%s\",\"ip\":\"%s\",\"rssi\":%d,\"mode\":\"%s\"}",
+                       "{\"connected\":%s,\"state\":%d,\"ssid\":\"%s\",\"ip\":\"%s\",\"rssi\":%d,\"mode\":\"%s\"}",
                        status.connected ? "true" : "false",
+                       (int)status.state,
                        status.ssid,
                        status.ip,
                        (int)status.rssi,

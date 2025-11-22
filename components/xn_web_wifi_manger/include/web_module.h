@@ -25,12 +25,20 @@
  *
  * 仅保留网页展示需要的少量字段，由上层通过回调填充。
  */
+typedef enum {
+    WEB_WIFI_STATUS_STATE_IDLE = 0,       ///< 空闲/未连接
+    WEB_WIFI_STATUS_STATE_CONNECTING,     ///< 正在尝试连接
+    WEB_WIFI_STATUS_STATE_CONNECTED,      ///< 已连接并获取到 IP
+    WEB_WIFI_STATUS_STATE_FAILED,         ///< 一轮尝试后认为连接失败
+} web_wifi_status_state_t;
+
 typedef struct {
-    bool   connected;        ///< 是否已成功连接路由器
-    char   ssid[32];         ///< 当前连接的 SSID（无连接时可为 "-"）
-    char   ip[16];           ///< 当前 STA 的 IPv4 地址字符串，如 "192.168.4.2"
-    int8_t rssi;             ///< 当前连接的信号强度（dBm），无连接时可为 0
-    char   mode[8];          ///< 当前工作模式字符串，如 "AP" / "STA" / "AP+STA"
+    web_wifi_status_state_t state; ///< 抽象连接状态，便于前端区分展示
+    bool                    connected;        ///< 是否已成功连接路由器
+    char                    ssid[32];         ///< 当前连接的 SSID（无连接时可为 "-"）
+    char                    ip[16];           ///< 当前 STA 的 IPv4 地址字符串，如 "192.168.4.2"
+    int8_t                  rssi;             ///< 当前连接的信号强度（dBm），无连接时可为 0
+    char                    mode[8];          ///< 当前工作模式字符串，如 "AP" / "STA" / "AP+STA"
 } web_wifi_status_t;
 
 /**
