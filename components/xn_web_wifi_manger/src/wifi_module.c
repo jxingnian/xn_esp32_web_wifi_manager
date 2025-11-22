@@ -2,7 +2,7 @@
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 16:38:01
  * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 18:30:06
+ * @LastEditTime: 2025-11-22 20:47:00
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\src\wifi_module.c
  * @Description: WiFi 模块实现
  * 
@@ -385,6 +385,11 @@ esp_err_t wifi_module_connect(const char *ssid, const char *password)
 
     esp_err_t   ret;
     wifi_mode_t mode = WIFI_MODE_NULL;
+
+    wifi_ap_record_t ap_info;
+    if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+        (void)esp_wifi_disconnect();
+    }
 
     /* 获取当前模式 */
     ret = esp_wifi_get_mode(&mode);

@@ -431,9 +431,11 @@
                 if (response.ok) {
                     showStatus('WiFi配置成功！设备正在连接到网络...', 'success');
                     
-                    // 等待设备连接到新网络后再提示
+                    // 等待设备连接到新网络后再提示，并刷新状态和已保存WiFi列表
                     setTimeout(() => {
                         showStatus('配置完成！设备已连接到新网络', 'success');
+                        getWiFiStatus();
+                        getSavedWiFi();
                     }, 5000);
                 } else {
                     throw new Error('配置失败');
@@ -548,6 +550,7 @@
                     }
                     
                     getWiFiStatus(); // 更新状态显示
+                    getSavedWiFi();  // 刷新已保存WiFi列表（顺序可能因最近连接而变化）
                 }, 3000);
             } catch (error) {
                 showStatus('连接失败: ' + error.message, 'error');

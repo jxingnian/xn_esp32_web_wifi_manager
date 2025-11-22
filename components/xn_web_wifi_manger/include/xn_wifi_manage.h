@@ -1,8 +1,8 @@
 /*
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 16:24:42
- * @LastEditors: xingnian && jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 21:45:00
+ * @LastEditors: xingnian jixingnian@gmail.com
+ * @LastEditTime: 2025-11-22 20:53:44
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\include\xn_wifi_manage.h
  * @Description: WiFi 管理模块对外接口（封装 WiFi / 存储 / Web 配网）
  *
@@ -78,7 +78,7 @@ typedef struct {
     (wifi_manage_config_t){                                \
         .max_retry_count       = 5,                        \
         .reconnect_interval_ms = 10000,                    \
-        .ap_ssid               = "XingNian",               \
+        .ap_ssid               = "XN-ESP32-AP",            \
         .ap_password           = "12345678",               \
         .ap_ip                 = "192.168.4.1",            \
         .wifi_event_cb         = NULL,                     \
