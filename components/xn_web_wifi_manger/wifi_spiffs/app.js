@@ -2,7 +2,7 @@
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 21:40:00
  * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 22:00:39
+ * @LastEditTime: 2025-11-22 23:31:21
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\wifi_spiffs\app.js
  * @Description: Web 配网页面的前端逻辑骨架（仅基础事件与占位渲染）
  *
@@ -525,6 +525,12 @@
         if (dom.inputPassword) {
           dom.inputPassword.value = '';
         }
+
+        // 自动滚动到“连接 WiFi”表单区域，方便立即发起连接
+        if (dom.formConnect && typeof dom.formConnect.scrollIntoView === 'function') {
+          dom.formConnect.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        dom.inputSsid.focus();
       });
     }
 
