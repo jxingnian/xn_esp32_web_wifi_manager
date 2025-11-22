@@ -441,6 +441,38 @@
     dom.connectMessage.textContent = message || '';
   }
 
+  /**
+   * 发起一次“连接 WiFi”的请求。
+   *
+   * 由后端根据 SSID/密码保存配置并触发状态机重连，
+   * 实际连接进度通过上方“当前 WiFi 状态”模块反映。
+   */
+  function connectWifi(ssid, password) {
+    if (!ssid || !window.fetch) {
+      return;
+    }
+
+    var url = '/api/wifi/connect?ssid=' + encodeURIComponent(ssid);
+    if (password) {
+      url += '&password=' + encodeURIComponent(password);
+    }
+
+    fetch(url, {
+      method: 'POST',
+    })
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error('http ' + res.status);
+        }
+      })
+      .then(function () {
+        setConnectMessage('已发起连接请求，请稍候查看上方状态。');
+      })
+      .catch(function () {
+        setConnectMessage('连接请求发送失败');
+      });
+  }
+
   /* -------------------- 事件绑定（仅占位） -------------------- */
 
   /**
@@ -473,13 +505,7 @@
           return;
         }
 
-        // 预留：在此处发起“连接 WiFi”的请求
-        // 当前仅输出到控制台，并给出占位提示
-        console.log('[wifi-ui] connect submit (占位逻辑)', {
-          ssid: ssid,
-          passwordLength: password.length,
-        });
-        setConnectMessage('已提交占位请求：连接逻辑尚未接入后台');
+        connectWifi(ssid, password);
       });
     }
 

@@ -328,6 +328,46 @@ static esp_err_t wifi_manage_connect_web_saved(const char *ssid)
     return ESP_OK;
 }
 
+/* -------------------- Web 回调：表单连接 WiFi -------------------- */
+/**
+ * @brief 提供给 Web 的“表单连接 WiFi”回调
+ *
+ * 实现思路：
+ * 1. 根据表单传入的 SSID/密码构造一条 wifi_config_t；
+ * 2. 调用 wifi_storage_on_connected() 将其更新/插入到保存列表首位；
+ * 3. 主动断开当前连接，让状态机按最新优先级自动重连。
+ */
+static esp_err_t wifi_manage_connect_web_form(const char *ssid, const char *password)
+{
+    if (ssid == NULL || ssid[0] == '\0') {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    wifi_config_t cfg = {0};
+
+    /* 填充 SSID */
+    strncpy((char *)cfg.sta.ssid, ssid, sizeof(cfg.sta.ssid));
+    cfg.sta.ssid[sizeof(cfg.sta.ssid) - 1] = '\0';
+
+    /* 填充密码（可选） */
+    if (password != NULL && password[0] != '\0') {
+        strncpy((char *)cfg.sta.password, password, sizeof(cfg.sta.password));
+        cfg.sta.password[sizeof(cfg.sta.password) - 1] = '\0';
+    }
+
+    /* 通过存储模块将该配置提升为最高优先级 */
+    esp_err_t ret = wifi_storage_on_connected(&cfg);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    /* 主动断开当前连接，让状态机在后续收到“断开”事件后，
+     * 按最新优先级从首选 WiFi 开始重新尝试连接。 */
+    (void)esp_wifi_disconnect();
+
+    return ESP_OK;
+}
+
 /* -------------------- WiFi 模块事件回调 -------------------- */
 /**
  * @brief 供 WiFi 模块调用的事件回调，用于驱动管理状态机
@@ -572,6 +612,7 @@ esp_err_t wifi_manage_init(const wifi_manage_config_t *config)
         web_cfg.scan_cb           = wifi_manage_scan_web;
         web_cfg.delete_saved_cb   = wifi_manage_delete_web_saved;
         web_cfg.connect_saved_cb  = wifi_manage_connect_web_saved;
+        web_cfg.connect_cb        = wifi_manage_connect_web_form;
 
         ret = web_module_init(&web_cfg);
         if (ret != ESP_OK) {

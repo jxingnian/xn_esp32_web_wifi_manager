@@ -97,6 +97,11 @@ typedef esp_err_t (*web_delete_saved_cb_t)(const char *ssid);
 typedef esp_err_t (*web_connect_saved_cb_t)(const char *ssid);
 
 /**
+ * @brief 通过表单连接 WiFi 的回调（SSID + 密码）
+ */
+typedef esp_err_t (*web_connect_cb_t)(const char *ssid, const char *password);
+
+/**
  * @brief Web 模块配置
  *
  * 该配置在初始化时传入一次，模块内部会保存副本。
@@ -108,6 +113,7 @@ typedef struct {
     web_scan_cb_t         scan_cb;          ///< 执行一次 WiFi 扫描并返回结果的回调
     web_delete_saved_cb_t delete_saved_cb;  ///< 删除已保存 WiFi 的回调
     web_connect_saved_cb_t connect_saved_cb; ///< 连接已保存 WiFi 的回调
+    web_connect_cb_t      connect_cb;       ///< 通过表单连接 WiFi 的回调
 } web_module_config_t;
 
 /**
@@ -121,6 +127,7 @@ typedef struct {
         .scan_cb          = NULL,              \
         .delete_saved_cb  = NULL,              \
         .connect_saved_cb = NULL,              \
+        .connect_cb       = NULL,              \
     }
 
 /**

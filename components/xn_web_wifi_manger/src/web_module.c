@@ -2,7 +2,7 @@
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 21:45:00
  * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 23:09:23
+ * @LastEditTime: 2025-11-22 23:16:43
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\src\web_module.c
  * @Description: Web 配网模块实现（HTTP 服务器 + SPIFFS 静态资源）
  *
@@ -214,7 +214,6 @@ static esp_err_t web_module_saved_get_handler(httpd_req_t *req)
     if (cnt == 0) {
         static const char *EMPTY_JSON = "{\"items\":[]}";
         httpd_resp_send(req, EMPTY_JSON, strlen(EMPTY_JSON));
-        free(list);
         return ESP_OK;
     }
 
@@ -341,6 +340,51 @@ static esp_err_t web_module_scan_get_handler(httpd_req_t *req)
 
     httpd_resp_send(req, json, (int)offset);
     free(list);
+    return ESP_OK;
+}
+
+/**
+ * @brief /api/wifi/connect：通过表单连接指定 WiFi
+ *
+ * 从查询字符串中读取 ssid/password 参数，
+ * 具体连接逻辑由上层回调实现（通常是 wifi_manage）。
+ */
+static esp_err_t web_module_connect_handler(httpd_req_t *req)
+{
+    if (s_web_cfg.connect_cb == NULL) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "connect not supported");
+        return ESP_OK;
+    }
+
+    char query[160]   = {0};
+    char ssid[32]     = {0};
+    char password[64] = {0};
+
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing query");
+        return ESP_OK;
+    }
+
+    (void)httpd_query_key_value(query, "ssid", ssid, sizeof(ssid));
+    (void)httpd_query_key_value(query, "password", password, sizeof(password));
+
+    if (ssid[0] == '\0') {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing ssid");
+        return ESP_OK;
+    }
+
+    const char *pwd_arg = (password[0] == '\0') ? NULL : password;
+
+    esp_err_t ret = s_web_cfg.connect_cb(ssid, pwd_arg);
+    if (ret != ESP_OK) {
+        httpd_resp_send_err(req,
+                            HTTPD_500_INTERNAL_SERVER_ERROR,
+                            "connect failed");
+        return ESP_OK;
+    }
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, "{\"ok\":true}", strlen("{\"ok\":true}"));
     return ESP_OK;
 }
 
@@ -524,6 +568,17 @@ static esp_err_t web_module_start_server(void)
             .user_ctx = NULL,
         };
         httpd_register_uri_handler(s_http_server, &uri_saved_del);
+    }
+
+    /* 表单连接 WiFi 接口（可选） */
+    if (s_web_cfg.connect_cb != NULL) {
+        static const httpd_uri_t uri_connect = {
+            .uri      = "/api/wifi/connect",
+            .method   = HTTP_POST,
+            .handler  = web_module_connect_handler,
+            .user_ctx = NULL,
+        };
+        httpd_register_uri_handler(s_http_server, &uri_connect);
     }
 
     /* 连接已保存 WiFi 接口（可选） */
