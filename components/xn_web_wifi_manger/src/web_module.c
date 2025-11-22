@@ -155,14 +155,15 @@ static esp_err_t web_module_status_get_handler(httpd_req_t *req)
         status.rssi = 0;
     }
 
-    /* 简单 JSON 序列化：假定 SSID/IP 不包含引号等特殊字符 */
+    /* 简单 JSON 序列化：假定 SSID/IP/mode 不包含引号等特殊字符 */
     int len = snprintf(json,
                        sizeof(json),
-                       "{\"connected\":%s,\"ssid\":\"%s\",\"ip\":\"%s\",\"rssi\":%d}",
+                       "{\"connected\":%s,\"ssid\":\"%s\",\"ip\":\"%s\",\"rssi\":%d,\"mode\":\"%s\"}",
                        status.connected ? "true" : "false",
                        status.ssid,
                        status.ip,
-                       (int)status.rssi);
+                       (int)status.rssi,
+                       status.mode);
 
     if (len < 0) {
         httpd_resp_send_err(req,

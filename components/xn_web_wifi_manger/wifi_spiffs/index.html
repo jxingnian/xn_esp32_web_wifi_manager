@@ -2,7 +2,7 @@
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 21:25:04
  * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 21:38:55
+ * @LastEditTime: 2025-11-22 22:04:01
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\wifi_spiffs\index.html
  * @Description: Web 配网页面（仅基础框架：WiFi 状态 / 已保存 / 扫描 / 连接）
  *
@@ -47,7 +47,7 @@
         <section class="card" id="section-status">
           <div class="card-header">
             <div class="card-title">当前 WiFi 状态</div>
-            <!-- 运行模式占位，默认认为设备处于 AP+STA 模式 -->
+            <!-- 运行模式：显示当前 WiFi 模式（AP / STA / AP+STA），未获取时默认为 AP+STA -->
             <div class="card-extra" id="wifi-status-mode">AP+STA</div>
           </div>
           <div class="card-body">
@@ -68,7 +68,7 @@
                 </div>
               </div>
 
-              <!-- 右侧为信号强度可视化（纯装饰，可后续绑定 RSSI） -->
+              <!-- 右侧为信号强度可视化（已根据 RSSI 映射当前连接信号等级） -->
               <div class="status-visual">
                 <div class="signal-bar" data-level="0" aria-hidden="true">
                   <span></span>

@@ -151,6 +151,7 @@
     var ssid = data.ssid || '-';
     var ip = data.ip || '-';
     var rssi = typeof data.rssi === 'number' ? data.rssi : null;
+    var mode = data.mode || null;
 
     if (dom.statusText) {
       dom.statusText.textContent = connected ? '已连接' : '未连接';
@@ -160,6 +161,11 @@
     }
     if (dom.statusIp) {
       dom.statusIp.textContent = ip;
+    }
+
+    // 运行模式：仅在后端提供 mode 字段时覆盖默认值
+    if (dom.statusMode && mode) {
+      dom.statusMode.textContent = mode;
     }
 
     // 顶部徽章小圆点：仅通过是否连接区分颜色（样式由 CSS 控制）

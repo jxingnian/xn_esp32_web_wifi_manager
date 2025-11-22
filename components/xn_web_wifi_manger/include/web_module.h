@@ -30,6 +30,7 @@ typedef struct {
     char   ssid[32];         ///< 当前连接的 SSID（无连接时可为 "-"）
     char   ip[16];           ///< 当前 STA 的 IPv4 地址字符串，如 "192.168.4.2"
     int8_t rssi;             ///< 当前连接的信号强度（dBm），无连接时可为 0
+    char   mode[8];          ///< 当前工作模式字符串，如 "AP" / "STA" / "AP+STA"
 } web_wifi_status_t;
 
 /**
