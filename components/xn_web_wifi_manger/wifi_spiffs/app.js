@@ -2,7 +2,7 @@
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 21:40:00
  * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 21:48:17
+ * @LastEditTime: 2025-11-22 22:00:39
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\wifi_spiffs\app.js
  * @Description: Web 配网页面的前端逻辑骨架（仅基础事件与占位渲染）
  *
@@ -121,6 +121,102 @@
     setConnectMessage('');
   }
 
+  /* -------------------- 当前 WiFi 状态：请求与渲染 -------------------- */
+
+  /**
+   * 根据 RSSI 粗略映射信号等级：0~3。
+   * 等级仅用于控制 signal-bar 的亮度，不追求精确。
+   */
+  function levelFromRssi(rssi) {
+    if (typeof rssi !== 'number') {
+      return 0;
+    }
+    if (rssi >= -60) return 3;
+    if (rssi >= -70) return 2;
+    if (rssi >= -80) return 1;
+    return 0;
+  }
+
+  /**
+   * 将后端返回的状态数据应用到页面上。
+   *
+   * @param data 形如 { connected, ssid, ip, rssi } 的对象
+   */
+  function applyStatus(data) {
+    if (!data) {
+      return;
+    }
+
+    var connected = !!data.connected;
+    var ssid = data.ssid || '-';
+    var ip = data.ip || '-';
+    var rssi = typeof data.rssi === 'number' ? data.rssi : null;
+
+    if (dom.statusText) {
+      dom.statusText.textContent = connected ? '已连接' : '未连接';
+    }
+    if (dom.statusSsid) {
+      dom.statusSsid.textContent = ssid;
+    }
+    if (dom.statusIp) {
+      dom.statusIp.textContent = ip;
+    }
+
+    // 顶部徽章小圆点：仅通过是否连接区分颜色（样式由 CSS 控制）
+    if (dom.badgeDot) {
+      dom.badgeDot.style.backgroundColor = connected ? '#22c55e' : '#f97316';
+    }
+
+    // 信号条亮度按 RSSI 粗略映射
+    if (dom.statusSignalBar) {
+      var level = levelFromRssi(rssi);
+      dom.statusSignalBar.setAttribute('data-level', String(level));
+    }
+  }
+
+  /**
+   * 从后端查询一次当前 WiFi 状态。
+   *
+   * - 仅在页面加载完成后调用一次；
+   * - 请求失败时保持初始占位状态，不弹出提示。
+   */
+  function loadStatusOnce() {
+    // 与后端约定的状态查询接口路径
+    var url = '/api/wifi/status';
+
+    if (!window.fetch) {
+      // 旧环境下不强行适配，保持占位即可
+      return;
+    }
+
+    fetch(url)
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error('http ' + res.status);
+        }
+        return res.json();
+      })
+      .then(function (data) {
+        applyStatus(data || {});
+      })
+      .catch(function () {
+        // 失败时保持默认未连接状态
+      });
+  }
+
+  /**
+   * 启动一个简单的轮询：每隔固定时间刷新一次当前 WiFi 状态。
+   *
+   * 间隔设置为 1 秒，足够跟上状态变化，又不会造成明显压力。
+   */
+  function startStatusPolling() {
+    // 先立即拉取一次，保证页面初始状态尽快变为真实状态
+    loadStatusOnce();
+
+    // 之后每 1 秒刷新一次
+    setInterval(loadStatusOnce, 1000);
+  }
+
   /**
    * 设置“连接 WiFi”模块下方的提示信息。
    *
@@ -191,6 +287,7 @@
     initDom();
     renderInitialState();
     bindEvents();
+    startStatusPolling();
   }
 
   document.addEventListener('DOMContentLoaded', bootstrap);
