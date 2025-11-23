@@ -1,8 +1,8 @@
 /*
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 16:24:42
- * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 22:56:45
+ * @LastEditors: xingnian j_xingnian@163.com
+ * @LastEditTime: 2025-11-23 10:56:50
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\src\xn_wifi_manage.c
  * @Description: WiFi 管理模块实现（封装 WiFi / 存储 / Web 配网，提供自动重连与状态管理）
  */
@@ -332,40 +332,16 @@ static esp_err_t wifi_manage_connect_web_saved(const char *ssid)
 /**
  * @brief 提供给 Web 的“表单连接 WiFi”回调
  *
- * 实现思路：
- * 1. 根据表单传入的 SSID/密码构造一条 wifi_config_t；
- * 2. 调用 wifi_storage_on_connected() 将其更新/插入到保存列表首位；
- * 3. 主动断开当前连接，让状态机按最新优先级自动重连。
  */
 static esp_err_t wifi_manage_connect_web_form(const char *ssid, const char *password)
 {
     if (ssid == NULL || ssid[0] == '\0') {
         return ESP_ERR_INVALID_ARG;
     }
+    
+    const char *pwd = (password != NULL && password[0] != '\0') ? password : NULL;
 
-    wifi_config_t cfg = {0};
-
-    /* 填充 SSID */
-    strncpy((char *)cfg.sta.ssid, ssid, sizeof(cfg.sta.ssid));
-    cfg.sta.ssid[sizeof(cfg.sta.ssid) - 1] = '\0';
-
-    /* 填充密码（可选） */
-    if (password != NULL && password[0] != '\0') {
-        strncpy((char *)cfg.sta.password, password, sizeof(cfg.sta.password));
-        cfg.sta.password[sizeof(cfg.sta.password) - 1] = '\0';
-    }
-
-    /* 通过存储模块将该配置提升为最高优先级 */
-    esp_err_t ret = wifi_storage_on_connected(&cfg);
-    if (ret != ESP_OK) {
-        return ret;
-    }
-
-    /* 主动断开当前连接，让状态机在后续收到“断开”事件后，
-     * 按最新优先级从首选 WiFi 开始重新尝试连接。 */
-    (void)esp_wifi_disconnect();
-
-    return ESP_OK;
+    return wifi_module_connect(ssid, pwd);
 }
 
 /* -------------------- WiFi 模块事件回调 -------------------- */
