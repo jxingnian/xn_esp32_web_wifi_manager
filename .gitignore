@@ -6,3 +6,6 @@ managed_components/
 # ESP-IDF 配置文件
 sdkconfig
 sdkconfig.old
+
+# other
+call-word.md
