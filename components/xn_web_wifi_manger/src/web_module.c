@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "esp_log.h"
 #include "esp_spiffs.h"
@@ -30,6 +31,60 @@ static const char *TAG = "web_module";
 static bool               s_web_inited = false;
 static web_module_config_t s_web_cfg;        /* 保存一份配置副本 */
 static httpd_handle_t      s_http_server = NULL;
+
+/* -------------------- URL 解码辅助 -------------------- */
+
+static int web_hex_to_int(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    }
+    c = (char)tolower((unsigned char)c);
+    if (c >= 'a' && c <= 'f') {
+        return 10 + (c - 'a');
+    }
+    return -1;
+}
+
+/**
+ * @brief 对形如 "%40" 的 URL 编码在原地解码
+ *
+ * 说明：
+ * - 仅处理 "%" + 2 位十六进制 以及 "+" -> 空格；
+ * - 在当前场景中用于解码查询字符串中的 ssid/password。
+ */
+static void web_url_decode_inplace(char *str)
+{
+    if (str == NULL) {
+        return;
+    }
+
+    char *src = str;
+    char *dst = str;
+
+    while (*src != '\0') {
+        if (*src == '%' && isxdigit((unsigned char)src[1]) && isxdigit((unsigned char)src[2])) {
+            int hi = web_hex_to_int(src[1]);
+            int lo = web_hex_to_int(src[2]);
+            if (hi >= 0 && lo >= 0) {
+                *dst = (char)((hi << 4) | lo);
+                src += 3;
+            } else {
+                *dst = *src;
+                src++;
+            }
+        } else if (*src == '+') {
+            *dst = ' ';
+            src++;
+        } else {
+            *dst = *src;
+            src++;
+        }
+        dst++;
+    }
+
+    *dst = '\0';
+}
 
 /* -------------------- SPIFFS 挂载辅助 -------------------- */
 
@@ -379,8 +434,14 @@ static esp_err_t web_module_connect_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
-    (void)httpd_query_key_value(query, "ssid", ssid, sizeof(ssid));
+    if (httpd_query_key_value(query, "ssid", ssid, sizeof(ssid)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing ssid");
+        return ESP_OK;
+    }
     (void)httpd_query_key_value(query, "password", password, sizeof(password));
+
+    web_url_decode_inplace(ssid);
+    web_url_decode_inplace(password);
 
     if (ssid[0] == '\0') {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing ssid");
@@ -421,7 +482,14 @@ static esp_err_t web_module_saved_delete_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
-    if (httpd_query_key_value(query, "ssid", ssid, sizeof(ssid)) != ESP_OK || ssid[0] == '\0') {
+    if (httpd_query_key_value(query, "ssid", ssid, sizeof(ssid)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing ssid");
+        return ESP_OK;
+    }
+
+    web_url_decode_inplace(ssid);
+
+    if (ssid[0] == '\0') {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing ssid");
         return ESP_OK;
     }
@@ -461,7 +529,14 @@ static esp_err_t web_module_saved_connect_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
-    if (httpd_query_key_value(query, "ssid", ssid, sizeof(ssid)) != ESP_OK || ssid[0] == '\0') {
+    if (httpd_query_key_value(query, "ssid", ssid, sizeof(ssid)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing ssid");
+        return ESP_OK;
+    }
+
+    web_url_decode_inplace(ssid);
+
+    if (ssid[0] == '\0') {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing ssid");
         return ESP_OK;
     }
