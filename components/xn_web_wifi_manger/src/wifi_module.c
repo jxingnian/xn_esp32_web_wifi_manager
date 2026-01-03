@@ -1,8 +1,8 @@
 /*
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 16:38:01
- * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 20:47:00
+ * @LastEditors: xingnian j_xingnian@163.com
+ * @LastEditTime: 2026-01-03 11:01:42
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\src\wifi_module.c
  * @Description: WiFi 模块实现
  * 
@@ -19,6 +19,7 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
+#include "lwip/ip4_addr.h"
 #include "nvs_flash.h"
 
 #include "wifi_module.h"
@@ -255,12 +256,16 @@ esp_err_t wifi_module_init(const wifi_module_config_t *config)
         s_ap_netif = esp_netif_create_default_wifi_ap();
     }
 
-    /* 如启用 AP 且配置了 ap_ip，则设置 AP IP（网关跟随 IP） */
+    /* 如启用 AP 且配置了 ap_ip，则设置 AP IP
+     * esp_netif_create_default_wifi_ap() 内部已预配置 DHCP，需先停止才能改 IP */
     if (s_wifi_cfg.enable_ap && s_ap_netif != NULL && s_wifi_cfg.ap_ip[0] != '\0') {
         esp_netif_ip_info_t ip_info = {0};
         if (esp_netif_str_to_ip4(s_wifi_cfg.ap_ip, &ip_info.ip) == ESP_OK) {
             ip_info.gw = ip_info.ip;
-            (void)esp_netif_set_ip_info(s_ap_netif, &ip_info);
+            IP4_ADDR(&ip_info.netmask, 255, 255, 255, 0);
+            esp_netif_dhcps_stop(s_ap_netif);
+            esp_netif_set_ip_info(s_ap_netif, &ip_info);
+            esp_netif_dhcps_start(s_ap_netif);
         }
     }
 

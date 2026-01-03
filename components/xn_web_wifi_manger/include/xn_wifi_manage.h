@@ -1,8 +1,8 @@
 /*
  * @Author: 星年 && jixingnian@gmail.com
  * @Date: 2025-11-22 16:24:42
- * @LastEditors: xingnian jixingnian@gmail.com
- * @LastEditTime: 2025-11-22 22:36:38
+ * @LastEditors: xingnian j_xingnian@163.com
+ * @LastEditTime: 2026-01-03 10:58:45
  * @FilePath: \xn_web_wifi_config\components\xn_web_wifi_manger\include\xn_wifi_manage.h
  * @Description: WiFi 管理模块对外接口（封装 WiFi / 存储 / Web 配网）
  *
@@ -80,7 +80,7 @@ typedef struct {
         .reconnect_interval_ms = 10000,                    \
         .ap_ssid               = "XN-ESP32-AP",            \
         .ap_password           = "12345678",               \
-        .ap_ip                 = "192.168.4.1",            \
+        .ap_ip                 = "192.168.5.1",            \
         .wifi_event_cb         = NULL,                     \
         .save_wifi_count       = 5,                        \
         .web_port              = 80,                       \
